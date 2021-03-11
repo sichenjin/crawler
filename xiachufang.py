@@ -4,6 +4,12 @@ import threading
 import requests
 from bs4 import BeautifulSoup
 import os
+import json 
+import time
+import random
+
+import traceback
+
 
 base_url = 'http://www.xiachufang.com'
 
@@ -140,7 +146,7 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
     name=soup.find('span',{'itemprop':{'name'}}).text.strip()  #作者名称
     yl=[]  #用料
     all_tr_div=soup.find_all('div',{'class':{'ings'}})
-    all_tr = all_tr_div.find_all('tr')
+    all_tr = all_tr_div[0].find_all('tr')
     # print(all_tr)
     for tr in all_tr:
         yl_name=tr('td')[0].a.text.strip()
@@ -148,24 +154,45 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
         if not yl_unit:
             yl_unit='适量'
         yl.append(yl_name+':'+yl_unit)
+    print(yl)
     steps=[]
+    pic_url = []
     all_li_div=soup.find_all('div',{'class':{'steps'}})
-    all_li = all_li_div.find_all('li')
-    print(all_li)
+    # print(all_li_div)
+    all_li = all_li_div[0].find_all('li')
+    # print(all_li)
     for li in all_li:
         steps.append(li('p')[0].text.strip())
+        image = li.findAll('img')
+        try:
+            pic_url.append(image[0]['src'])
+        except:
+            continue
     try:
         tip=soup.find('div',{'class':{'tip'}}).text.strip()   #小贴士
     except:
         tip=''
+    print(pic_url)
+    print(steps)
     ratingValue=yes_or_no(ratingValue)
     cooked=yes_or_no(cooked)
     name=yes_or_no(name)
     yl=yes_or_no(yl)
     steps=yes_or_no(steps)
     tip=yes_or_no(tip)
-    save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url)
-    print('{}--❤--{}--❤--爬取完成！'.format(cate,title))
+    # save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url)
+    dish_dict = {  
+        "菜名": title,
+        "综合评分":ratingValue,
+        "做过的人数":cooked,
+        "这道菜的原作者":name,
+        "用料":yl,
+        "步骤":steps,
+        "注意点":tip,
+        "图片":pic_url,
+    }
+    print('{}--{}爬取完成！'.format(cate,title))
+    return dish_dict
 
 def yes_or_no(item):  #判断是不是空的
     if not item:
@@ -205,8 +232,24 @@ if __name__ == '__main__':
     for i in range(len(cate_url)):
         print('开始爬取{}分类'.format(cate_name[i]))
         recipe_url=get_recipe_url(cate_url[i])
+        dish_list = []
         for j in range(len(recipe_url)):
             try:
-                get_info(recipe_url[j],cate_name[i])
-            except:
+                dishinfo = get_info(recipe_url[j],cate_name[i])
+                print(dishinfo)
+                dish_list.append(dishinfo)
+                time.sleep(random.random()*30)
+            except Exception as e:
+                traceback.print_exc()
+                # print('get info fail')
+                time.sleep(random.random()*10)
                 continue
+        big_cate=cate_name[i].split('_')[0]
+        small_cate=cate_name[i].split('_')[1]
+        path='./'+big_cate+'/'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        path_name=path+small_cate+'.json'
+        with open(path_name,'w',encoding='utf-8')as f:
+            json.dump(dish_list,f)
+        f.close()
