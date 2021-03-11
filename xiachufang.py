@@ -164,7 +164,7 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
     yl=yes_or_no(yl)
     steps=yes_or_no(steps)
     tip=yes_or_no(tip)
-    save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate)
+    save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url)
     print('{}--❤--{}--❤--爬取完成！'.format(cate,title))
 
 def yes_or_no(item):  #判断是不是空的
@@ -172,7 +172,7 @@ def yes_or_no(item):  #判断是不是空的
         item='无'
     return item
 
-def save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate):  #保存菜谱信息
+def save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url):  #保存菜谱信息
     big_cate=cate.split('_')[0]
     small_cate=cate.split('_')[1]
     path='./'+big_cate+'/'
