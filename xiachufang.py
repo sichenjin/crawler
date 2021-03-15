@@ -118,12 +118,13 @@ def get_cate(url):  #得到所有的分类
 
 def get_recipe_url(url):  #得到每个类别里面至少5页的上面所有菜谱的网址
     recipe_url=[]
-    for i in range(1,6):
+    for i in range(1,10):
         try:
             url_t=url+'?page='+str(i)
             html=get_page(url_t)
             soup=BeautifulSoup(html,'html.parser')
             info=soup.find('div',{'class':{'normal-recipe-list'}})
+            all_a = info.find_all('a',{'target':{'_blank'}})
             all_p=info.find_all('p',{'class':{'name'}})
             for p in all_p:
                 href=p('a')[0]['href']
@@ -137,24 +138,28 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
     html=get_page(url)
     soup=BeautifulSoup(html,'html.parser')
     title=soup.find('h1',{'class':{'page-title'}}).text.strip()  #菜名
+    # try:
+    #     ratingValue=soup.find('span',{'itemprop':{'ratingValue'}}).text.strip() #评分
+    # except:
+    #     ratingValue=''
     try:
-        ratingValue=soup.find('span',{'itemprop':{'ratingValue'}}).text.strip() #评分
+        div1=soup.find('div',{'class':{'cooked'}})
+        cooked=div1('span')[0].text.strip()  #做过这道菜的人
     except:
-        ratingValue=''
-    div1=soup.find('div',{'class':{'cooked'}})
-    cooked=div1('span')[0].text.strip()  #做过这道菜的人
-    name=soup.find('span',{'itemprop':{'name'}}).text.strip()  #作者名称
+        cooked = '无'
+    namediv=soup.find('div',{'class':{'author'}})  #作者名称
+    name = namediv.find('a')['title']
     yl=[]  #用料
     all_tr_div=soup.find_all('div',{'class':{'ings'}})
     all_tr = all_tr_div[0].find_all('tr')
     # print(all_tr)
     for tr in all_tr:
-        yl_name=tr('td')[0].a.text.strip()
+        yl_name=tr('td')[0].text.strip()
         yl_unit=tr('td')[1].text.strip()
         if not yl_unit:
             yl_unit='适量'
         yl.append(yl_name+':'+yl_unit)
-    print(yl)
+    # print(yl)
     steps=[]
     pic_url = []
     all_li_div=soup.find_all('div',{'class':{'steps'}})
@@ -172,9 +177,9 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
         tip=soup.find('div',{'class':{'tip'}}).text.strip()   #小贴士
     except:
         tip=''
-    print(pic_url)
-    print(steps)
-    ratingValue=yes_or_no(ratingValue)
+    # print(pic_url)
+    # print(steps)
+    # ratingValue=yes_or_no(ratingValue)
     cooked=yes_or_no(cooked)
     name=yes_or_no(name)
     yl=yes_or_no(yl)
@@ -183,7 +188,7 @@ def get_info(url,cate):  #得到每道菜谱的详细信息
     # save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url)
     dish_dict = {  
         "菜名": title,
-        "综合评分":ratingValue,
+        # "综合评分":ratingValue,
         "做过的人数":cooked,
         "这道菜的原作者":name,
         "用料":yl,
@@ -232,24 +237,27 @@ if __name__ == '__main__':
     for i in range(len(cate_url)):
         print('开始爬取{}分类'.format(cate_name[i]))
         recipe_url=get_recipe_url(cate_url[i])
-        dish_list = []
+        # dish_list = []
         for j in range(len(recipe_url)):
             try:
                 dishinfo = get_info(recipe_url[j],cate_name[i])
-                print(dishinfo)
-                dish_list.append(dishinfo)
-                time.sleep(random.random()*30)
+                dishinfo['类别'] = cate_name[i]
+                # print(dishinfo)
+                # dish_list.append(dishinfo)
+                with open('xiachufang.txt','a+',encoding='utf-8')as f:
+                    json.dump(dishinfo,f,ensure_ascii=False)
+                    f.write('\n')
+                f.close()
+                time.sleep(random.random()*10)
             except Exception as e:
                 traceback.print_exc()
                 # print('get info fail')
-                time.sleep(random.random()*10)
+                time.sleep(random.random()*6)
                 continue
-        big_cate=cate_name[i].split('_')[0]
-        small_cate=cate_name[i].split('_')[1]
-        path='./'+big_cate+'/'
-        if not os.path.exists(path):
-            os.makedirs(path)
-        path_name=path+small_cate+'.json'
-        with open(path_name,'w',encoding='utf-8')as f:
-            json.dump(dish_list,f)
-        f.close()
+        # big_cate=cate_name[i].split('_')[0]
+        # small_cate=cate_name[i].split('_')[1]
+        # path='./'+big_cate+'/'
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        # path_name=path+small_cate+'.json'
+       
