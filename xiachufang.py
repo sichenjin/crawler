@@ -248,7 +248,7 @@ if __name__ == '__main__':
                     json.dump(dishinfo,f,ensure_ascii=False)
                     f.write('\n')
                 f.close()
-                time.sleep(random.random()*10)
+                time.sleep(random.random()*15)
             except Exception as e:
                 traceback.print_exc()
                 # print('get info fail')
