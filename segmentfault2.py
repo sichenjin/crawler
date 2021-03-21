@@ -10,14 +10,14 @@ import random
 
 import traceback
 from string import Template
-
+from pyquery import PyQuery as pq
 
 urlTmpl = Template(
     'https://segmentfault.com/t/${tagId}/blogs?page=${page}')
 base_url = 'https://segmentfault.com/'
 
-def fill_tmpl(self,tag,page):
-    return self.urlTmpl.substitute(
+def fill_tmpl(tag,page):
+    return urlTmpl.substitute(
         page=page, tagId=tag)
 
 
@@ -39,74 +39,77 @@ def get_tag_name(url):  #得到所有的分类
     return tag_name
 
 def get_recipe_url(tag_name):  #得到每个类别里面所有页的上面的blogs
+    tag_name = '涛思数据'
     recipe_url=[]
     page = 1
     tag_url = fill_tmpl(tag_name,page)
-    html=get_page(url_t)
+    html=get_page(tag_url)
     soup=BeautifulSoup(html,'html.parser')
     list_div=soup.find('div',{'class':{'stream-list blog-stream'}})   
     items = list_div.find_all('div',{'class':{'summary'}})
     while len(items)>0:
         for item in items:
             h2 = item.find('h2')
-            href= base_url + h2.find('a').['href']
+            href= base_url + h2.find('a')['href']
             recipe_url.append(href)
         page = page+1
         tag_url = fill_tmpl(tag_name,page)
-        html=get_page(url_t)
+        html=get_page(tag_url)
         soup=BeautifulSoup(html,'html.parser')
         list_div=soup.find('div',{'class':{'stream-list blog-stream'}})   
         items = list_div.find_all('div',{'class':{'summary'}})
-        
+        time.sleep(random.random()*10)
     return recipe_url
 
-def get_info(url,cate):  #得到每道菜谱的详细信息
-    html=get_page(url)
+def get_info(url,cate):  
+    html= get_page(url)
+    doc = pq(html)
     soup=BeautifulSoup(html,'html.parser')
-    title=soup.find('h1').text.strip()  #菜名
-    name=soup.find('span',{'class':{'posttime'}}).text.split(' ')[1]  #作者名称
-    yl=[]  #用料
-    all_tr_div=soup.find_all('div',{'class':{'c_mtr_li'}})
-    # print(all_tr)
-    for div in all_tr_div:
-        yl_name=div.find_all('span')[0].text 
-        yl_unit=div.find_all('span')[1].text
-        if not yl_unit:
-            yl_unit='适量'
-        yl.append(yl_name+':'+yl_unit)
-    # print(yl)
-    steps=[]
-    pic_url = []
-    all_li_div=soup.find_all('div',{'class':{'stepitem'}})
-    # print(all_li_div)
-    # all_li = all_li_div[0].find_all('li')
-    # print(all_li)
-    for li_div in all_li_div:
-        step_div = li_div.find_all('div',{'class':{'stepc'}})
-        try:
-            steps.append(step_div[0]('p')[0].text.strip())
-        except:
-            pass
-        image = li_div.findAll('img',{'class':{'stepimg'}})
-        try:
-            pic_url.append(image[0]['src'])
-        except:
-            continue
-    
-    # print(pic_url)
-    # print(steps)
-    name=yes_or_no(name)
-    yl=yes_or_no(yl)
-    steps=yes_or_no(steps)
-    # save_recipe(title,ratingValue,cooked,name,yl,steps,tip,cate,pic_url)
+    title=soup.find('h1').text.strip()  #title 
+    author=soup.find('strong',{'class':{'align-self-center font-size-14'}}).text.strip()  #作者名称
+    date = soup.find('time',{'class':{'text-secondary font-size-14'}}).text.strip()
+    time = date['time']
+    content = []
+    content_div=doc('.article fmt article-content')
+    # soup.find_all('div',{'class':{'article fmt article-content'}})
+    for element in content_div.children():
+        if element.get(0).tagName.startswith('h') :
+            content.append({
+                ctype:'head',
+                data: element.innerText
+            })
+        elif element.get(0).tagName == 'p':
+            if element.innerText != '':
+                content.append({
+                    ctype:'p',
+                    data: element.innerText
+                })
+            else:
+                img = element.find('img')
+                try:
+                    content.append({
+                    ctype:'img',
+                    data: base_url+img['src']
+                })
+                except: pass
+        elif element.get(0).tagName == 'pre':
+            content.append({
+                ctype:'code',
+                data: element.innerText
+            })
+        elif element.get(0).tagName == 'table':
+            content.append({
+                ctype:'table',
+                data: element.innerText
+            })
+      
     dish_dict = {  
-        "菜名": title,
-        "这道菜的原作者":name,
-        "用料":yl,
-        "步骤":steps,
-        "图片":pic_url,
+        "题目": title,
+        "作者": author ,
+        "发布时间":time,
+        "内容":content,
     }
-    print('{}--{}爬取完成！'.format(cate,title))
+    print('{}--爬取完成！'.format(title))
     return dish_dict
 
 def yes_or_no(item):  #判断是不是空的
@@ -123,7 +126,7 @@ if __name__ == '__main__':
     tag_name=get_tag_name(start_url)
     for i in range(len(tag_name)):
         print('开始爬取{}分类'.format(tag_name[i]))
-        recipe_url=get_recipe_url(tag_name[i]))
+        recipe_url=get_recipe_url(tag_name[i])
         # dish_list = []
         for j in range(len(recipe_url)):
             try:
