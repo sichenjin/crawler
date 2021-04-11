@@ -1,9 +1,11 @@
-
+import traceback
+import ast
 file1 = open('./crawler/meishijie.txt', 'r')
 Lines = file1.readlines()
 
-for line in Lines:
+for sline in Lines:
     try:
+        line = ast.literal_eval(sline)
         steps = line['步骤']
         imgs = line['图片']
         line['步骤图']=[]
@@ -14,7 +16,9 @@ for line in Lines:
                     '图':imgs[i]
                 })
         else: continue 
-    except: continue 
+    except Exception as e:
+        traceback.print_exc() 
+        continue 
 
 file1.close()
 
